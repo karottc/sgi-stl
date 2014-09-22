@@ -4,5 +4,5 @@
 
 ### resource ###
 
-* SGI STL主页：http://www.sgi.com/
+* SGI STL主页：http://www.sgi.com/tech/stl/index.html
 * STLport主页：http://www.stlport.org/  （STLport有各种平台的移植版本）
