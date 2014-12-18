@@ -73,11 +73,12 @@ struct _Rb_tree_node_base
   typedef _Rb_tree_Color_type _Color_type;
   typedef _Rb_tree_node_base* _Base_ptr;
 
-  _Color_type _M_color; 
-  _Base_ptr _M_parent;
-  _Base_ptr _M_left;
-  _Base_ptr _M_right;
+  _Color_type _M_color;   // 节点颜色
+  _Base_ptr _M_parent;    // RB树的许多操作必须知道父节点
+  _Base_ptr _M_left;      // 指向左节点
+  _Base_ptr _M_right;     // 指向右节点
 
+  // 查找最大最小的极值是很好找的，因为RG-tree也是一个二叉搜索树
   static _Base_ptr _S_minimum(_Base_ptr __x)
   {
     while (__x->_M_left != 0) __x = __x->_M_left;
@@ -95,7 +96,7 @@ template <class _Value>
 struct _Rb_tree_node : public _Rb_tree_node_base
 {
   typedef _Rb_tree_node<_Value>* _Link_type;
-  _Value _M_value_field;
+  _Value _M_value_field;   // 节点值
 };
 
 
@@ -126,6 +127,7 @@ struct _Rb_tree_base_iterator
 
   void _M_decrement()
   {
+      ////TODO: _M_node->parent->parent 怎么会等于_M_node 自身呢？？？
     if (_M_node->_M_color == _S_rb_tree_red &&
         _M_node->_M_parent->_M_parent == _M_node)
       _M_node = _M_node->_M_right;
@@ -213,6 +215,9 @@ inline _Value* value_type(const _Rb_tree_iterator<_Value, _Ref, _Ptr>&) {
 
 #endif /* __STL_CLASS_PARTIAL_SPECIALIZATION */
 
+// 全局函数
+// 新节点比为红节点。如果插入处之父节点亦为红节点，就违反红黑树规则，此时必须
+// 做属性旋转和颜色改变。
 inline void 
 _Rb_tree_rotate_left(_Rb_tree_node_base* __x, _Rb_tree_node_base*& __root)
 {
@@ -222,6 +227,7 @@ _Rb_tree_rotate_left(_Rb_tree_node_base* __x, _Rb_tree_node_base*& __root)
     __y->_M_left->_M_parent = __x;
   __y->_M_parent = __x->_M_parent;
 
+  // __y完全代替__x的地位（必须将x对其父节点的关系完全接收过来）
   if (__x == __root)
     __root = __y;
   else if (__x == __x->_M_parent->_M_left)
@@ -251,10 +257,13 @@ _Rb_tree_rotate_right(_Rb_tree_node_base* __x, _Rb_tree_node_base*& __root)
   __x->_M_parent = __y;
 }
 
+// 全局函数
+// 重新令树形平衡（改变颜色及旋转树形）
+// 参数1为新增节点，参数2为root
 inline void 
 _Rb_tree_rebalance(_Rb_tree_node_base* __x, _Rb_tree_node_base*& __root)
 {
-  __x->_M_color = _S_rb_tree_red;
+  __x->_M_color = _S_rb_tree_red;   // 新节点必须是红色
   while (__x != __root && __x->_M_parent->_M_color == _S_rb_tree_red) {
     if (__x->_M_parent == __x->_M_parent->_M_parent->_M_left) {
       _Rb_tree_node_base* __y = __x->_M_parent->_M_parent->_M_right;
@@ -293,7 +302,7 @@ _Rb_tree_rebalance(_Rb_tree_node_base* __x, _Rb_tree_node_base*& __root)
       }
     }
   }
-  __root->_M_color = _S_rb_tree_black;
+  __root->_M_color = _S_rb_tree_black;   // 根节点永远为黑
 }
 
 inline _Rb_tree_node_base*
@@ -710,7 +719,9 @@ public:
   pair<iterator,bool> insert_unique(const value_type& __x);
   iterator insert_equal(const value_type& __x);
 
+  // 将x插入到RB-tree中（保持节点值独一无二）
   iterator insert_unique(iterator __position, const value_type& __x);
+  // 将x插入到RB-tree中（允许节点重复）
   iterator insert_equal(iterator __position, const value_type& __x);
 
 #ifdef __STL_MEMBER_TEMPLATES  
@@ -849,16 +860,19 @@ _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>
   return *this;
 }
 
+// 真正的插入程序
 template <class _Key, class _Value, class _KeyOfValue, 
           class _Compare, class _Alloc>
 typename _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>::iterator
 _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>
   ::_M_insert(_Base_ptr __x_, _Base_ptr __y_, const _Value& __v)
 {
+    // 参数__x_是新值插入点，__y_是插入点的父节点，__v是新值
   _Link_type __x = (_Link_type) __x_;
   _Link_type __y = (_Link_type) __y_;
   _Link_type __z;
 
+  // _M_key_compare是键值大小比较准则，应该会是个function object
   if (__y == _M_header || __x != 0 || 
       _M_key_compare(_KeyOfValue()(__v), _S_key(__y))) {
     __z = _M_create_node(__v);
@@ -885,6 +899,8 @@ _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>
   return iterator(__z);
 }
 
+// 插入新值：节点键值允许重复
+// 注意，返回值是一个 RB-tree 迭代器，指向新增节点。
 template <class _Key, class _Value, class _KeyOfValue, 
           class _Compare, class _Alloc>
 typename _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>::iterator
@@ -898,10 +914,13 @@ _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>
     __x = _M_key_compare(_KeyOfValue()(__v), _S_key(__x)) ? 
             _S_left(__x) : _S_right(__x);
   }
+  // __x是新插入点，__y是插入点的父节点，__v是新值
   return _M_insert(__x, __y, __v);
 }
 
-
+// 插入新值：节点键值不允许重复，若重复则插入无效
+// 注意，返回的是一个pair,第一个元素是个RB-tree的迭代器，指向新增节点，
+// 第二个元素表示插入成功与否。
 template <class _Key, class _Value, class _KeyOfValue, 
           class _Compare, class _Alloc>
 pair<typename _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>::iterator, 
@@ -917,14 +936,17 @@ _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>
     __comp = _M_key_compare(_KeyOfValue()(__v), _S_key(__x));
     __x = __comp ? _S_left(__x) : _S_right(__x);
   }
-  iterator __j = iterator(__y);   
+  iterator __j = iterator(__y);   // 把__j作为插入节点的父节点
+  // 如果__comp = true，表示将插入左侧
   if (__comp)
-    if (__j == begin())     
+    if (__j == begin())    // 表示插入节点的父节点是最左节点 
       return pair<iterator,bool>(_M_insert(__x, __y, __v), true);
     else
       --__j;
+  // 小于新值，将在右侧插入。
   if (_M_key_compare(_S_key(__j._M_node), _KeyOfValue()(__v)))
     return pair<iterator,bool>(_M_insert(__x, __y, __v), true);
+  // 此处表示新值一定与树中的键值重复，那么就不插入新值。
   return pair<iterator,bool>(__j, false);
 }
 
@@ -1142,6 +1164,7 @@ void _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>
   while (__first != __last) erase(*__first++);
 }
 
+// RB-tree是二叉搜索树，find操作正式擅长的操作
 template <class _Key, class _Value, class _KeyOfValue, 
           class _Compare, class _Alloc>
 typename _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>::iterator 
@@ -1151,6 +1174,7 @@ _Rb_tree<_Key,_Value,_KeyOfValue,_Compare,_Alloc>::find(const _Key& __k)
   _Link_type __x = _M_root();      // Current node. 
 
   while (__x != 0) 
+      // __x > __k 就想左，否则向右
     if (!_M_key_compare(_S_key(__x), __k))
       __y = __x, __x = _S_left(__x);
     else

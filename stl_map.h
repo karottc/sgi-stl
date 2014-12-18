@@ -54,6 +54,7 @@ template <class _Key, class _Tp, class _Compare, class _Alloc>
 inline bool operator<(const map<_Key,_Tp,_Compare,_Alloc>& __x, 
                       const map<_Key,_Tp,_Compare,_Alloc>& __y);
 
+// _Key 为键值类型，_Tp为实值类型。
 template <class _Key, class _Tp, class _Compare, class _Alloc>
 class map {
 public:
@@ -65,12 +66,13 @@ public:
 
 // typedefs:
 
-  typedef _Key                  key_type;
-  typedef _Tp                   data_type;
+  typedef _Key                  key_type;  // 键值类型
+  typedef _Tp                   data_type; // 数据类型
   typedef _Tp                   mapped_type;
-  typedef pair<const _Key, _Tp> value_type;
-  typedef _Compare              key_compare;
+  typedef pair<const _Key, _Tp> value_type;    // 元素类型(键值/实值)
+  typedef _Compare              key_compare;   // 键值比较函数
     
+  // 下面定义一个functor,其作用就是调用“元素比较函数”
   class value_compare
     : public binary_function<value_type, value_type, bool> {
   friend class map<_Key,_Tp,_Compare,_Alloc>;
@@ -84,6 +86,8 @@ public:
   };
 
 private:
+  // 以下定义表述类型(representation type).以map元素类型(一个pair)的第一类型，
+  // 作为RB-tree节点的键值类型
   typedef _Rb_tree<key_type, value_type, 
                    _Select1st<value_type>, key_compare, _Alloc> _Rep_type;
   _Rep_type _M_t;  // red-black tree representing map
@@ -93,6 +97,8 @@ public:
   typedef typename _Rep_type::reference reference;
   typedef typename _Rep_type::const_reference const_reference;
   typedef typename _Rep_type::iterator iterator;
+  // 注意上一行，map并不像set一样将iterator定义为RB-tree的const_iterator.
+  // 因为它允许用户通过其迭代器修改元素的实值(value)。
   typedef typename _Rep_type::const_iterator const_iterator;
   typedef typename _Rep_type::reverse_iterator reverse_iterator;
   typedef typename _Rep_type::const_reverse_iterator const_reverse_iterator;
@@ -101,6 +107,9 @@ public:
   typedef typename _Rep_type::allocator_type allocator_type;
 
   // allocation/deallocation
+  // 注意，map异地你敢使用底层RB-tree的insert_unique()而非insert_equal()
+  // multimap才使用insert_equal()
+  // 因为map不允许相同的键值存在，multimap才允许相同键值存在。
 
   map() : _M_t(_Compare(), allocator_type()) {}
   explicit map(const _Compare& __comp,
@@ -146,6 +155,7 @@ public:
   }
 
   // accessors:
+  // 以下所有的map操作行为，RG-tree都已提供，map只要转调用即可。
 
   key_compare key_comp() const { return _M_t.key_comp(); }
   value_compare value_comp() const { return value_compare(_M_t.key_comp()); }
@@ -165,6 +175,9 @@ public:
   _Tp& operator[](const key_type& __k) {
     iterator __i = lower_bound(__k);
     // __i->first is greater than or equivalent to __k.
+    // insert那句，根据键值和实值取出一个元素，由于实值未知，所以产生一个与实值
+    // 类型相同的暂时对象替代->value_type(__k,_Tp()),然后将这个元素插入到map里面
+    // 此时，__i指向插入之后的新位置的迭代器，然后在返回实值。
     if (__i == end() || key_comp()(__k, (*__i).first))
       __i = insert(__i, value_type(__k, _Tp()));
     return (*__i).second;
@@ -173,6 +186,8 @@ public:
 
   // insert/erase
 
+  // 返回值pair中，bool表示插入成功与否，如果插入成功，iterator就指向
+  // 被插入的那个元素。
   pair<iterator,bool> insert(const value_type& __x) 
     { return _M_t.insert_unique(__x); }
   iterator insert(iterator position, const value_type& __x)

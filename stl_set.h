@@ -42,6 +42,7 @@ __STL_BEGIN_NAMESPACE
 
 // Forward declarations of operators < and ==, needed for friend declaration.
 
+// less<_Key> 默认情况下使用递增排序
 template <class _Key, class _Compare __STL_DEPENDENT_DEFAULT_TMPL(less<_Key>),
           class _Alloc = __STL_DEFAULT_ALLOCATOR(_Key) >
 class set;

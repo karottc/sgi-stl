@@ -161,10 +161,11 @@ class vector : protected _Vector_base<_Tp, _Alloc>
 private:
   typedef _Vector_base<_Tp, _Alloc> _Base;
 public:
+  // vector 的嵌套类型定义
   typedef _Tp value_type;
   typedef value_type* pointer;
   typedef const value_type* const_pointer;
-  typedef value_type* iterator;
+  typedef value_type* iterator;   // vector的迭代器是普通指针
   typedef const value_type* const_iterator;
   typedef value_type& reference;
   typedef const value_type& const_reference;
@@ -188,9 +189,9 @@ protected:
 #ifdef __STL_HAS_NAMESPACES
   using _Base::_M_allocate;
   using _Base::_M_deallocate;
-  using _Base::_M_start;
-  using _Base::_M_finish;
-  using _Base::_M_end_of_storage;
+  using _Base::_M_start;   // 表示目前使用的空间头
+  using _Base::_M_finish;  // 表示目前使用的空间尾
+  using _Base::_M_end_of_storage;   // 表示目前可用的空间的尾
 #endif /* __STL_HAS_NAMESPACES */
 
 protected:
@@ -697,8 +698,10 @@ void vector<_Tp, _Alloc>::_M_fill_insert(iterator __position, size_type __n,
                                          const _Tp& __x)
 {
   if (__n != 0) {
+      // 备用空间大于新增元素个数
     if (size_type(_M_end_of_storage - _M_finish) >= __n) {
       _Tp __x_copy = __x;
+      // 计算插入点之后的现有元素个数。
       const size_type __elems_after = _M_finish - __position;
       iterator __old_finish = _M_finish;
       if (__elems_after > __n) {
