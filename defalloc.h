@@ -35,6 +35,8 @@
 
 
 template <class T>
+// ptrdiff_t 在stddef.h中定义，是一个signed 的类型
+// size_t 是unsigned类型。
 inline T* allocate(ptrdiff_t size, T*) {
     set_new_handler(0);
     T* tmp = (T*)(::operator new((size_t)(size * sizeof(T))));
