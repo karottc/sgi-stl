@@ -6,3 +6,5 @@
 /comment
 /tags
 cscope.files
+.cproject
+.project
